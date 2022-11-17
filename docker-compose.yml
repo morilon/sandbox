@@ -1,0 +1,94 @@
+version: "3"
+services:
+
+# Database & Storage
+ 
+  postgres:
+    container_name: postgres
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./config/postgres.env
+    volumes:
+      - data-postgres:/var/lib/postgresql/data
+      - ./data/seed/postgres.sql:/docker-entrypoint-initdb.d/seed.sql
+  
+  mongo:
+    container_name: mongo
+    image: mvertes/alpine-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - data-mongo:/data/db
+  
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - data-redis:/data
+
+# Messaging & Events
+  
+  kafka:
+    container_name: kafka
+    image: confluentinc/cp-kafka
+    ports:
+      - "9092:9092"
+    env_file:
+      - ./config/kafka.env
+    depends_on:
+      - kafka-zookeeeper
+  
+  kafka-zookeeeper:
+    container_name: kafka-zookeeper
+    image: confluentinc/cp-zookeeper
+    ports:
+      - "2181:2181"
+    env_file:
+      - ./config/kafka-zookeeper.env
+  
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:management-alpine
+    ports:
+      - "15001:15672"
+      - "5672:5672"
+    env_file:
+      - ./config/rabbitmq.env
+
+# Security
+ 
+  keycloak:
+    container_name: keycloak
+    image: jboss/keycloak
+    restart: always
+    env_file:
+      - ./config/keycloak.env
+    ports:
+      - "10001:8080"
+    volumes:
+      - ./data/realms:/tmp/dev-service.json
+    depends_on:
+      - postgres
+
+# Tools
+
+  mailhog:
+    container_name: mailhog
+    image: mailhog/mailhog:latest
+    ports:
+    - "15002:8025"
+    - "1025:1025"
+
+networks:
+  default:
+    name: net-sandbox
+
+volumes:
+  data-postgres:
+  data-mongo:
+  data-redis:
+  data-rabbitmq:
